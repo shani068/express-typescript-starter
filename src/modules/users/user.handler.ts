@@ -1,21 +1,23 @@
-import type { Request, Response, NextFunction } from "express";
-import * as UserService from "./user.service";
+import { ApiError } from "../../utils/ApiError";
 import { ApiResponse } from "../../utils/ApiResponse";
+import { asyncHandler } from "../../utils/asyncHandler";
 
-export const getProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const user = await UserService.getById(req.user!.id);
-    res.status(200).json(new ApiResponse(200, user));
-  } catch (err) {
-    next(err);
-  }
-};
+import * as UserService from "./user.service";
 
-export const updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const user = await UserService.update(req.user!.id, req.body);
-    res.status(200).json(new ApiResponse(200, user, "Profile updated"));
-  } catch (err) {
-    next(err);
-  }
-};
+import type { Request, Response } from "express";
+
+export const getProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user?.id;
+  if (!userId) throw new ApiError(401, "Unauthorized");
+
+  const user = await UserService.getById(userId);
+  res.status(200).json(new ApiResponse(200, user));
+});
+
+export const updateProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user?.id;
+  if (!userId) throw new ApiError(401, "Unauthorized");
+
+  const user = await UserService.update(userId, req.body);
+  res.status(200).json(new ApiResponse(200, user, "Profile updated"));
+});

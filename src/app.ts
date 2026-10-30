@@ -1,18 +1,20 @@
-import express, { Application } from "express";
+import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
+import express, { type Application } from "express";
 import helmet from "helmet";
+
+import { auth } from "./config/auth.config";
 import logger from "./config/logger.config";
+import { registerDocs } from "./config/swagger.config";
 import { errorHandler } from "./middleware/error.middleware";
 import { registerRoutes } from "./routes";
-import { registerDocs } from "./config/swagger.config";
-import { toNodeHandler } from "better-auth/node";
-import { auth } from "./config/auth.config";
 import "./config/redis.config";
+import { asyncHandler } from "./utils/asyncHandler";
 
 const app: Application = express();
 
 // ── Better Auth handler — before express.json() ─────────────────────────
-app.all("/api/auth/*", toNodeHandler(auth));
+app.all("/api/auth/*", asyncHandler(toNodeHandler(auth)));
 
 // ── Global Middleware ──────────────────────────────────────────────────────
 app.use(helmet());

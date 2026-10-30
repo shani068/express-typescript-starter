@@ -1,19 +1,13 @@
 import redis from "../config/redis.config";
 
-
 type CacheModule = "user" | "auth" | "rate" | "session";
 
 type CacheKey = string & { readonly __brand: "CacheKey" };
 
 // format: "module:subtype:id"
-export const createCacheKey = (
-  module: CacheModule,
-  subtype: string,
-  id: string
-): CacheKey => {
+export const createCacheKey = (module: CacheModule, subtype: string, id: string): CacheKey => {
   return `${module}:${subtype}:${id}` as CacheKey;
 };
-
 
 // Set with expiry (seconds)
 export const setCache = async (
