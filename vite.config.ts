@@ -1,6 +1,22 @@
+import { fileURLToPath } from "node:url";
+
 import { defineConfig } from "vite-plus";
 
+const PARENT_IMPORT_PATTERN = {
+  group: ["../**"],
+  message: "Use the @/ alias instead of parent-relative imports.",
+};
+
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
+  test: {
+    include: ["tests/**/*.test.ts"],
+    setupFiles: ["tests/setup.ts"],
+  },
   staged: {
     "*": "vp check --fix",
   },
@@ -128,9 +144,29 @@ export default defineConfig({
           "typescript/no-implied-eval": "error",
           "typescript/return-await": ["error", "in-try-catch"],
           "typescript/use-unknown-in-catch-callback-variable": "error",
+          "no-restricted-imports": ["error", { patterns: [PARENT_IMPORT_PATTERN] }],
         },
         jsPlugins: ["eslint-plugin-security", "eslint-plugin-no-secrets"],
         plugins: ["import"],
+      },
+      {
+        // Controllers hold business logic callable from routes, agent tools, and tests,
+        // so they must not depend on HTTP. Repeats the alias pattern: this override replaces it.
+        files: ["src/controllers/**/*.ts"],
+        rules: {
+          "no-restricted-imports": [
+            "error",
+            {
+              paths: [
+                {
+                  name: "express",
+                  message: "Controllers must not depend on HTTP; take typed arguments instead.",
+                },
+              ],
+              patterns: [PARENT_IMPORT_PATTERN],
+            },
+          ],
+        },
       },
     ],
     jsPlugins: [

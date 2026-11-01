@@ -1,9 +1,13 @@
-// import authRoutes from "../modules/auth/auth.routes";
-import userRoutes from "../modules/users/user.routes";
+import { Router } from "express";
 
-import type { Application } from "express";
+import docsRoutes from "@/routes/docs.routes";
+import healthRoutes from "@/routes/health.routes";
+import userRoutes from "@/routes/users.routes";
 
-export const registerRoutes = (app: Application): void => {
-  // app.use("/api/v1/auth", authRoutes);
-  app.use("/api/v1/users", userRoutes);
-};
+const router = Router();
+
+router.use(healthRoutes);
+router.use(docsRoutes);
+router.use("/api/v1/users", userRoutes);
+
+export default router;
