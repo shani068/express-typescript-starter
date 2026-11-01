@@ -3,53 +3,32 @@ import cors from "cors";
 import express, { type Application } from "express";
 import helmet from "helmet";
 
-import { auth } from "./config/auth.config";
-import logger from "./config/logger.config";
-import { registerDocs } from "./config/swagger.config";
-import { errorHandler } from "./middleware/error.middleware";
-import { registerRoutes } from "./routes";
-import "./config/redis.config";
-import { asyncHandler } from "./utils/asyncHandler";
+import { auth } from "@/lib/auth";
+import { errorHandler } from "@/middleware/error-handler";
+import { notFound } from "@/middleware/not-found";
+import { apiRateLimit } from "@/middleware/rate-limit";
+import { requestLogger } from "@/middleware/request-logger";
+import routes from "@/routes";
 
 const app: Application = express();
 
-// ── Better Auth handler — before express.json() ─────────────────────────
-app.all("/api/auth/*", asyncHandler(toNodeHandler(auth)));
-
-// ── Global Middleware ──────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors());
-app.use((req, res, next) => {
-  const start = Date.now();
+app.use(requestLogger);
 
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    logger.http(`${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`, {
-      method: req.method,
-      url: req.originalUrl,
-      statusCode: res.statusCode,
-      duration,
-      ip: req.ip,
-    });
-  });
+// Before Better Auth so sign-in attempts are limited too. /health and /docs are outside /api.
+app.use("/api", apiRateLimit);
 
-  next();
-});
+// Better Auth reads the raw request body, so it must come before express.json().
+app.all("/api/auth/*splat", toNodeHandler(auth));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── Routes ─────────────────────────────────────────────────────────────────
-registerRoutes(app);
+app.use(routes);
 
-// ── Docs ────────────────────────────────────────────────────────────────────
-registerDocs(app);
-
-// ── Health check ────────────────────────────────────────────────────────────
-app.get("/health", (_req, res) => {
-  res.status(200).json({ status: "ok" });
-});
-
-// ── Global Error Handler (must be last) ────────────────────────────────────
+// Must be last: unmatched routes, then every error.
+app.use(notFound);
 app.use(errorHandler);
 
 export default app;
